@@ -9,6 +9,8 @@ import {
   commandSchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
+import { openAIService } from "./services/openai";
+import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Project routes
