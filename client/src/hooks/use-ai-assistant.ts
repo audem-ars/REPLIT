@@ -38,44 +38,44 @@ export function useAIAssistant() {
   // Generate code completion
   const completionMutation = useMutation({
     mutationFn: async (options: CodeCompletionOptions) => {
-      const response = await apiRequest("/api/ai/complete", {
+      const response = await apiRequest<AICompletionResponse>("/api/ai/complete", {
         method: "POST",
         body: JSON.stringify(options),
       });
-      return response.completion as string;
+      return response.completion;
     },
   });
 
   // Explain code
   const explainMutation = useMutation({
     mutationFn: async (options: CodeExplanationOptions) => {
-      const response = await apiRequest("/api/ai/explain", {
+      const response = await apiRequest<AIExplanationResponse>("/api/ai/explain", {
         method: "POST",
         body: JSON.stringify(options),
       });
-      return response.explanation as string;
+      return response.explanation;
     },
   });
 
   // Fix code
   const fixMutation = useMutation({
     mutationFn: async (options: CodeFixOptions) => {
-      const response = await apiRequest("/api/ai/fix", {
+      const response = await apiRequest<AIFixResponse>("/api/ai/fix", {
         method: "POST",
         body: JSON.stringify(options),
       });
-      return response.fixedCode as string;
+      return response.fixedCode;
     },
   });
 
   // Generate documentation
   const documentMutation = useMutation({
     mutationFn: async (options: CodeExplanationOptions) => {
-      const response = await apiRequest("/api/ai/document", {
+      const response = await apiRequest<AIDocumentationResponse>("/api/ai/document", {
         method: "POST",
         body: JSON.stringify(options),
       });
-      return response.documentation as string;
+      return response.documentation;
     },
   });
 

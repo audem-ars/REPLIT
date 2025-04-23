@@ -20,6 +20,7 @@ export default function Editor() {
   const { projectId } = useParams();
   const id = parseInt(projectId || "1", 10);
   const { toast } = useToast();
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
   
   // State for resizable panels
   const { 
@@ -118,12 +119,34 @@ export default function Editor() {
           />
 
           <div className="flex-1 relative overflow-hidden flex flex-col">
-            <CodeEditor
-              file={activeFile}
-              onChange={updateFileContent}
-              position={position}
-              onPositionChange={setPosition}
-            />
+            <div className="flex-1 flex">
+              <div className={`flex-1 ${showAIAssistant ? 'border-r' : ''}`}>
+                <CodeEditor
+                  file={activeFile}
+                  onChange={updateFileContent}
+                  position={position}
+                  onPositionChange={setPosition}
+                />
+              </div>
+              
+              {showAIAssistant && (
+                <div className="w-80">
+                  <AIAssistantPanel 
+                    code={activeFile?.content || ""}
+                    language={activeFile?.language || ""}
+                    onApplyFix={(fixedCode) => {
+                      if (activeFile) {
+                        updateFileContent(activeFile.id, fixedCode);
+                        toast({
+                          title: "Code fixed",
+                          description: "The AI fix has been applied to your code.",
+                        });
+                      }
+                    }}
+                  />
+                </div>
+              )}
+            </div>
 
             <Terminal height={terminalHeight} projectId={id} />
             
@@ -133,6 +156,17 @@ export default function Editor() {
               onResize={handleTerminalResize}
               fromBottom={true}
             />
+            
+            {/* AI Assistant Toggle Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="absolute top-2 right-2 gap-1 bg-background/80 backdrop-blur-sm z-10"
+              onClick={() => setShowAIAssistant(!showAIAssistant)}
+            >
+              <Sparkles className="h-4 w-4 text-purple-500" />
+              {showAIAssistant ? "Hide AI" : "AI Assistant"}
+            </Button>
           </div>
         </div>
       </div>
