@@ -202,6 +202,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Assistant routes
+  const aiCodeCompletionSchema = z.object({
+    code: z.string(),
+    language: z.string(),
+    maxTokens: z.number().optional(),
+  });
+
+  app.post("/api/ai/complete", async (req: Request, res: Response) => {
+    try {
+      const validationResult = aiCodeCompletionSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        const errorMessage = fromZodError(validationResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      const { code, language, maxTokens } = validationResult.data;
+      const completion = await openAIService.generateCompletion({ 
+        code, 
+        language, 
+        maxTokens 
+      });
+      
+      res.status(200).json({ completion });
+    } catch (error: any) {
+      res.status(500).json({ 
+        message: "Failed to generate code completion",
+        error: error.message 
+      });
+    }
+  });
+
+  const aiCodeExplanationSchema = z.object({
+    code: z.string(),
+    language: z.string(),
+  });
+
+  app.post("/api/ai/explain", async (req: Request, res: Response) => {
+    try {
+      const validationResult = aiCodeExplanationSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        const errorMessage = fromZodError(validationResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      const { code, language } = validationResult.data;
+      const explanation = await openAIService.explainCode({ code, language });
+      
+      res.status(200).json({ explanation });
+    } catch (error: any) {
+      res.status(500).json({ 
+        message: "Failed to explain code",
+        error: error.message 
+      });
+    }
+  });
+
+  const aiCodeFixSchema = z.object({
+    code: z.string(),
+    error: z.string(),
+    language: z.string(),
+  });
+
+  app.post("/api/ai/fix", async (req: Request, res: Response) => {
+    try {
+      const validationResult = aiCodeFixSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        const errorMessage = fromZodError(validationResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      const { code, error, language } = validationResult.data;
+      const fixedCode = await openAIService.fixCode({ code, error, language });
+      
+      res.status(200).json({ fixedCode });
+    } catch (error: any) {
+      res.status(500).json({ 
+        message: "Failed to fix code",
+        error: error.message 
+      });
+    }
+  });
+
+  app.post("/api/ai/document", async (req: Request, res: Response) => {
+    try {
+      const validationResult = aiCodeExplanationSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        const errorMessage = fromZodError(validationResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      const { code, language } = validationResult.data;
+      const documentation = await openAIService.generateDocumentation({ code, language });
+      
+      res.status(200).json({ documentation });
+    } catch (error: any) {
+      res.status(500).json({ 
+        message: "Failed to generate documentation",
+        error: error.message 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

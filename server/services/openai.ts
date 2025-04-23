@@ -138,7 +138,7 @@ export class OpenAIService {
       });
 
       return response.choices[0].message.content || "";
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating documentation:", error);
       throw new Error(`Failed to generate documentation: ${error.message}`);
     }

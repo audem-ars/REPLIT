@@ -9,10 +9,12 @@ import CodeEditor from "@/components/CodeEditor";
 import Terminal from "@/components/Terminal";
 import StatusBar from "@/components/StatusBar";
 import ResizeHandle from "@/components/ResizeHandle";
+import { AIAssistantPanel } from "@/components/AIAssistantPanel";
 import { useResize } from "@/hooks/use-resize";
 import { useFiles } from "@/hooks/use-files";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Editor() {
   const { projectId } = useParams();
