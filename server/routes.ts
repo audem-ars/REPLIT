@@ -28,7 +28,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
-  // Project routes
+  // User specific routes
+  app.get("/api/user/projects", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const projects = await storage.getUserProjects(userId);
+      res.status(200).json(projects);
+    } catch (error) {
+      console.error("Error fetching user projects:", error);
+      res.status(500).json({ message: "Failed to fetch user projects" });
+    }
+  });
+
+  // Project routes - some public for demo purposes
   app.get("/api/projects", async (req: Request, res: Response) => {
     try {
       const projects = await storage.getProjects();
@@ -53,7 +65,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/projects", async (req: Request, res: Response) => {
+  app.post("/api/projects", isAuthenticated, async (req: any, res: Response) => {
     try {
       const validationResult = insertProjectSchema.safeParse(req.body);
       
@@ -62,16 +74,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: errorMessage });
       }
       
-      const project = await storage.createProject(validationResult.data);
+      // Associate project with the logged-in user
+      const projectData = {
+        ...validationResult.data,
+        userId: req.user.claims.sub
+      };
+      
+      const project = await storage.createProject(projectData);
       res.status(201).json(project);
     } catch (error) {
       res.status(500).json({ message: "Failed to create project" });
     }
   });
 
-  app.delete("/api/projects/:id", async (req: Request, res: Response) => {
+  app.delete("/api/projects/:id", isAuthenticated, async (req: any, res: Response) => {
     try {
       const id = parseInt(req.params.id, 10);
+      const userId = req.user.claims.sub;
+      
+      // Check if user owns the project
+      const project = await storage.getProject(id);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Only allow project owners to delete unless they're an admin
+      if (project.userId !== userId && !req.user.claims.isAdmin) {
+        return res.status(403).json({ message: "You don't have permission to delete this project" });
+      }
+      
       const success = await storage.deleteProject(id);
       
       if (!success) {
@@ -84,6 +116,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Collaborator routes
+  app.get("/api/projects/:projectId/collaborators", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const projectId = parseInt(req.params.projectId, 10);
+      const userId = req.user.claims.sub;
+      
+      // Check if user has access to this project
+      const project = await storage.getProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Only allow project owners or collaborators to view collaborators
+      if (project.userId !== userId) {
+        const isCollaborator = await storage.getProjectCollaborators(projectId)
+          .then(collaborators => collaborators.some(c => c.userId === userId));
+          
+        if (!isCollaborator) {
+          return res.status(403).json({ message: "You don't have permission to view project collaborators" });
+        }
+      }
+      
+      const collaborators = await storage.getProjectCollaborators(projectId);
+      res.status(200).json(collaborators);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch collaborators" });
+    }
+  });
+  
+  app.post("/api/projects/:projectId/collaborators", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const projectId = parseInt(req.params.projectId, 10);
+      const userId = req.user.claims.sub;
+      
+      // Check if user is the project owner
+      const project = await storage.getProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      if (project.userId !== userId) {
+        return res.status(403).json({ message: "Only project owners can add collaborators" });
+      }
+      
+      // Validate collaborator data from request body
+      const collaboratorSchema = z.object({
+        userId: z.string(),
+        accessLevel: z.enum(["read", "write", "admin"]).default("read"),
+      });
+      
+      const validationResult = collaboratorSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        const errorMessage = fromZodError(validationResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      // Create collaborator
+      const collaborator = await storage.addCollaborator({
+        projectId,
+        userId: validationResult.data.userId,
+        accessLevel: validationResult.data.accessLevel,
+      });
+      
+      res.status(201).json(collaborator);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to add collaborator" });
+    }
+  });
+  
+  app.delete("/api/projects/:projectId/collaborators/:collaboratorId", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const projectId = parseInt(req.params.projectId, 10);
+      const collaboratorId = req.params.collaboratorId;
+      const userId = req.user.claims.sub;
+      
+      // Check if user is the project owner
+      const project = await storage.getProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      if (project.userId !== userId) {
+        return res.status(403).json({ message: "Only project owners can remove collaborators" });
+      }
+      
+      const success = await storage.removeCollaborator(projectId, collaboratorId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Collaborator not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to remove collaborator" });
+    }
+  });
+  
   // File routes
   app.get("/api/projects/:projectId/files", async (req: Request, res: Response) => {
     try {

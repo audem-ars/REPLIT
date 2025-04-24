@@ -4,8 +4,9 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { File } from "@shared/schema";
 import { useState } from "react";
-import { Code, Play, Settings, Loader2 } from "lucide-react";
+import { Code, Play, Settings, Loader2, Sparkles } from "lucide-react";
 import { useLocation } from "wouter";
+import AuthHeader from "./AuthHeader";
 
 interface AppHeaderProps {
   projectName: string;
@@ -59,9 +60,12 @@ export default function AppHeader({ projectName, activeFile }: AppHeaderProps) {
     }
 
     try {
-      await apiRequest("POST", "/api/execute", {
-        command,
-        cwd: "/tmp"
+      await apiRequest("/api/execute", {
+        method: "POST",
+        body: JSON.stringify({
+          command,
+          cwd: "/tmp"
+        })
       });
       
       toast({
@@ -120,11 +124,22 @@ export default function AppHeader({ projectName, activeFile }: AppHeaderProps) {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon">
+              <Sparkles className="h-5 w-5 text-text-dim hover:text-text" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>AI Assistant</TooltipContent>
+        </Tooltip>
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon">
               <Settings className="h-5 w-5 text-text-dim hover:text-text" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Settings</TooltipContent>
         </Tooltip>
+        
+        <AuthHeader />
       </div>
     </header>
   );
