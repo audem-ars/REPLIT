@@ -1,4 +1,4 @@
-import { Express, Request, Response } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import { createServer, Server } from "http";
 import { storage } from "./storage";
 import { spawn } from "child_process";
@@ -11,8 +11,23 @@ import {
 import { fromZodError } from "zod-validation-error";
 import { openAIService } from "./services/openai";
 import { z } from "zod";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
   // Project routes
   app.get("/api/projects", async (req: Request, res: Response) => {
     try {
